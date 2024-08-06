@@ -1,36 +1,52 @@
 package com.nasza.terascihampelas.model
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.nasza.terascihampelas.database.AppDatabase
-import com.nasza.terascihampelas.model.Tenant
-import com.nasza.terascihampelas.model.TenantRepository
-import kotlinx.coroutines.Dispatchers
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import kotlinx.coroutines.launch
 
-class TenantViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository: TenantRepository
-    val allTenants: LiveData<List<Tenant>>
+class TenantViewModel : ViewModel() {
 
-    init {
-        val tenantDao = AppDatabase.getDatabase(application).tenantDao()
-        repository = TenantRepository(tenantDao)
-        allTenants = repository.allTenants
+    private val database: DatabaseReference = FirebaseDatabase.getInstance().getReference("tenants")
+    val allTenants: LiveData<List<Tenant>> = object : LiveData<List<Tenant>>() {
+        init {
+            database.addValueEventListener(object : com.google.firebase.database.ValueEventListener {
+                override fun onDataChange(snapshot: com.google.firebase.database.DataSnapshot) {
+                    val tenants = mutableListOf<Tenant>()
+                    for (dataSnapshot in snapshot.children) {
+                        val tenant = dataSnapshot.getValue(Tenant::class.java)
+                        tenant?.let { tenants.add(it) }
+                    }
+                    postValue(tenants)
+                }
+
+                override fun onCancelled(error: com.google.firebase.database.DatabaseError) {
+                    // Handle error
+                }
+            })
+        }
     }
 
-    fun insert(tenant: Tenant) = viewModelScope.launch(Dispatchers.IO) {
-        repository.insert(tenant)
+    fun insert(tenant: Tenant) {
+        viewModelScope.launch {
+            val key = database.push().key
+            key?.let {
+                database.child(it).setValue(tenant)
+            }
+        }
     }
 
-    fun update(tenant: Tenant) = viewModelScope.launch(Dispatchers.IO) {
-        repository.update(tenant)
+    fun update(tenant: Tenant) {
+        tenant.id?.let { id ->
+            database.child(id).setValue(tenant)
+        }
     }
 
-    fun delete(tenant: Tenant) = viewModelScope.launch(Dispatchers.IO) {
-        repository.delete(tenant)
+    fun delete(tenant: Tenant) {
+        tenant.id?.let { id ->
+            database.child(id).removeValue()
+        }
     }
 }
-

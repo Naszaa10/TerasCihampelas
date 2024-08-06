@@ -6,9 +6,23 @@
     android:padding="8dp">
 
     <TextView
-        android:id="@+id/text_view_review"
-        android:layout_width="match_parent"
+        android:id="@+id/text_view_name"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Review Text"
-        android:textSize="16sp" />
+        android:textSize="16sp"/>
+
+    <TextView
+        android:id="@+id/text_view_review"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:layout_marginTop="4dp" />
+
+    <RatingBar
+        android:id="@+id/rating_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:numStars="5"
+        android:stepSize="0.5"
+        android:layout_marginTop="4dp" />
 </LinearLayout>

@@ -1,22 +1,20 @@
 package com.nasza.terascihampelas
 
+import android.app.AlertDialog
+import android.content.DialogInterface
+import android.net.Uri
 import android.os.Bundle
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.nasza.terascihampelas.model.Tenant
-import com.nasza.terascihampelas.adapter.TenantAdapter
-import android.app.AlertDialog
-import android.content.DialogInterface
-import android.net.Uri
 import android.widget.Button
 import android.widget.EditText
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.lifecycle.ViewModelProvider
-import com.nasza.terascihampelas.R
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.nasza.terascihampelas.adapter.TenantAdapter
+import com.nasza.terascihampelas.model.Tenant
 import com.nasza.terascihampelas.model.TenantViewModel
 
 class TenantFragment : Fragment() {
@@ -50,12 +48,12 @@ class TenantFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        tenantViewModel = ViewModelProvider(this, ViewModelProvider.AndroidViewModelFactory.getInstance(requireActivity().application)).get(TenantViewModel::class.java)
+        tenantViewModel = TenantViewModel()
 
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
         tenantViewModel.allTenants.observe(viewLifecycleOwner, { tenants ->
-            recyclerView.adapter = TenantAdapter(tenants.toMutableList(), ::onImageChangeClick, ::onEditClick, ::onDeleteClick)
+            recyclerView.adapter = TenantAdapter(tenants.toMutableList(), ::onEditClick, ::onDeleteClick)
         })
 
         addTenantButton.setOnClickListener {
@@ -120,4 +118,3 @@ class TenantFragment : Fragment() {
         builder.show()
     }
 }
-

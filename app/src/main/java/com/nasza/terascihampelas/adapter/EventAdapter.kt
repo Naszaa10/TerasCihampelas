@@ -8,10 +8,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.nasza.terascihampelas.R
 import com.nasza.terascihampelas.model.Event
 
-class EventAdapter(private val events: List<Event>) : RecyclerView.Adapter<EventAdapter.EventViewHolder>() {
+class EventAdapter(
+    private val events: List<Event>,
+    private val onDeleteClick: (Event) -> Unit
+) : RecyclerView.Adapter<EventAdapter.EventViewHolder>() {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): EventViewHolder {
-        val view = LayoutInflater.from(parent.context).inflate(R.layout.item_event, parent, false)
+        val view = LayoutInflater.from(parent.context)
+            .inflate(R.layout.item_event, parent, false)
         return EventViewHolder(view)
     }
 
@@ -22,15 +26,17 @@ class EventAdapter(private val events: List<Event>) : RecyclerView.Adapter<Event
 
     override fun getItemCount(): Int = events.size
 
-    class EventViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
-        private val eventName: TextView = itemView.findViewById(R.id.event_name)
-        private val eventDate: TextView = itemView.findViewById(R.id.event_date)
-        private val eventDescription: TextView = itemView.findViewById(R.id.event_description)
+    inner class EventViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val nameTextView: TextView = itemView.findViewById(R.id.event_name)
+        private val dateTextView: TextView = itemView.findViewById(R.id.event_date)
+        private val descriptionTextView: TextView = itemView.findViewById(R.id.event_description)
+        private val deleteButton: View = itemView.findViewById(R.id.btn_hapus)
 
         fun bind(event: Event) {
-            eventName.text = event.name
-            eventDate.text = event.date
-            eventDescription.text = event.description
+            nameTextView.text = event.name
+            dateTextView.text = event.date
+            descriptionTextView.text = event.description
+            deleteButton.setOnClickListener { onDeleteClick(event) }
         }
     }
 }

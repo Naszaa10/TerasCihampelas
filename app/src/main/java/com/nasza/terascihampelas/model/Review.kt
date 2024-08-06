@@ -1,10 +1,11 @@
 package com.nasza.terascihampelas.model
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
+import com.google.firebase.database.IgnoreExtraProperties
 
-@Entity(tableName = "review_table")
+@IgnoreExtraProperties
 data class Review(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
-    val reviewText: String
+    var id: String? = "",
+    var name: String? = "",
+    var reviewText: String? = "",
+    var rating: Float? = 0f
 )
