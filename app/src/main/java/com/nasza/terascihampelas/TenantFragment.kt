@@ -1,10 +1,7 @@
 package com.nasza.terascihampelas
 
 import android.app.AlertDialog
-import android.content.DialogInterface
-import android.net.Uri
 import android.os.Bundle
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
@@ -13,27 +10,18 @@ import android.widget.Button
 import android.widget.EditText
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.firebase.database.FirebaseDatabase
+import com.nasza.terascihampelas.R
 import com.nasza.terascihampelas.adapter.TenantAdapter
 import com.nasza.terascihampelas.model.Tenant
-import com.nasza.terascihampelas.model.TenantViewModel
 
 class TenantFragment : Fragment() {
 
     private lateinit var recyclerView: RecyclerView
     private lateinit var addTenantButton: Button
-    private lateinit var tenantViewModel: TenantViewModel
-    private var imageChangePosition: Int? = null
-
-    private val getImageContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
-        uri?.let { selectedUri ->
-            imageChangePosition?.let { position ->
-                val tenant = tenantViewModel.allTenants.value?.get(position)
-                tenant?.imageUri = selectedUri.toString()
-                tenant?.let { tenantViewModel.update(it) }
-                imageChangePosition = null
-            }
-        }
-    }
+    private lateinit var tenantAdapter: TenantAdapter
+    private val database = FirebaseDatabase.getInstance()
+    private val tenantRef = database.getReference("tenants")
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -48,22 +36,21 @@ class TenantFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        tenantViewModel = TenantViewModel()
-
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
 
-        tenantViewModel.allTenants.observe(viewLifecycleOwner, { tenants ->
-            recyclerView.adapter = TenantAdapter(tenants.toMutableList(), ::onEditClick, ::onDeleteClick)
-        })
+        tenantRef.get().addOnSuccessListener { dataSnapshot ->
+            val tenants = mutableListOf<Tenant>()
+            for (snapshot in dataSnapshot.children) {
+                val tenant = snapshot.getValue(Tenant::class.java)
+                tenant?.let { tenants.add(it) }
+            }
+            tenantAdapter = TenantAdapter(tenants.toMutableList(), ::onEditClick, ::onDeleteClick)
+            recyclerView.adapter = tenantAdapter
+        }
 
         addTenantButton.setOnClickListener {
             showAddTenantDialog()
         }
-    }
-
-    private fun onImageChangeClick(position: Int) {
-        imageChangePosition = position
-        getImageContent.launch("image/*")
     }
 
     private fun onEditClick(tenant: Tenant) {
@@ -81,7 +68,8 @@ class TenantFragment : Fragment() {
         builder.setPositiveButton("Simpan") { _, _ ->
             tenant.name = nameEditText.text.toString()
             tenant.description = descriptionEditText.text.toString()
-            tenantViewModel.update(tenant)
+            tenant.id?.let { tenantRef.child(it).setValue(tenant) } // Perbarui tenant di Firebase
+            tenantAdapter.notifyDataSetChanged() // Beri tahu adapter untuk memperbarui daftar
         }
         builder.setNegativeButton("Batal", null)
         builder.show()
@@ -92,7 +80,8 @@ class TenantFragment : Fragment() {
         builder.setTitle("Hapus Tenant")
         builder.setMessage("Apakah Anda Yakin Akan Menghapus Tenant?")
         builder.setPositiveButton("Ya Yakin") { _, _ ->
-            tenantViewModel.delete(tenant)
+            tenant.id?.let { tenantRef.child(it).removeValue() } // Hapus tenant dari Firebase
+            tenantAdapter.removeTenant(tenant) // Hapus tenant dari daftar
         }
         builder.setNegativeButton("Batal", null)
         builder.show()
@@ -109,10 +98,12 @@ class TenantFragment : Fragment() {
         builder.setView(view)
         builder.setPositiveButton("Tambah") { _, _ ->
             val newTenant = Tenant(
+                id = tenantRef.push().key ?: "", // Buat ID unik untuk tenant
                 name = nameEditText.text.toString(),
                 description = descriptionEditText.text.toString()
             )
-            tenantViewModel.insert(newTenant)
+            newTenant.id?.let { tenantRef.child(it).setValue(newTenant) } // Tambahkan tenant baru ke Firebase
+            tenantAdapter.addTenant(newTenant) // Tambahkan tenant baru ke daftar
         }
         builder.setNegativeButton("Batal", null)
         builder.show()

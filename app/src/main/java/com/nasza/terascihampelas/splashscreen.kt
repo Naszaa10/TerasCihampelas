@@ -16,6 +16,6 @@ class splashscreen : AppCompatActivity() {
             val intent = Intent(this, MainActivity::class.java)
             startActivity(intent)
             finish()
-        }, 2000) // 3 detik delay
+        }, 2000) // 2 detik delay
     }
 }

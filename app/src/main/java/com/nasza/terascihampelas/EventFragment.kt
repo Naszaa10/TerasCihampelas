@@ -10,11 +10,11 @@ import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.ValueEventListener
+import com.google.firebase.database.ChildEventListener
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
 import com.nasza.terascihampelas.adapter.EventAdapter
 import com.nasza.terascihampelas.model.Event
 
@@ -24,6 +24,7 @@ class EventFragment : Fragment() {
     private lateinit var addEventButton: Button
     private val events = mutableListOf<Event>()
     private val database: DatabaseReference = FirebaseDatabase.getInstance().getReference("events")
+    private lateinit var adapter: EventAdapter
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -39,7 +40,7 @@ class EventFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         recyclerView.layoutManager = LinearLayoutManager(requireContext())
-        val adapter = EventAdapter(events, ::onDeleteClick)
+        adapter = EventAdapter(events, ::onDeleteClick)
         recyclerView.adapter = adapter
 
         addEventButton.setOnClickListener {
@@ -75,8 +76,7 @@ class EventFragment : Fragment() {
     private fun addEventToDatabase(event: Event) {
         database.child(event.id).setValue(event)
             .addOnSuccessListener {
-                events.add(event)
-                recyclerView.adapter?.notifyDataSetChanged()
+                // Data successfully added to database
             }
             .addOnFailureListener { e ->
                 e.printStackTrace()
@@ -84,16 +84,39 @@ class EventFragment : Fragment() {
     }
 
     private fun loadEvents() {
-        database.addValueEventListener(object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                events.clear()
-                for (childSnapshot in snapshot.children) {
-                    val event = childSnapshot.getValue(Event::class.java)
-                    if (event != null) {
+        database.addChildEventListener(object : ChildEventListener {
+            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                val event = snapshot.getValue(Event::class.java)
+                if (event != null) {
+                    // Check if the event is already in the list to avoid duplicates
+                    if (events.none { it.id == event.id }) {
                         events.add(event)
+                        adapter.notifyDataSetChanged()
                     }
                 }
-                recyclerView.adapter?.notifyDataSetChanged()
+            }
+
+            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {
+                val event = snapshot.getValue(Event::class.java)
+                if (event != null) {
+                    val index = events.indexOfFirst { it.id == event.id }
+                    if (index != -1) {
+                        events[index] = event
+                        adapter.notifyDataSetChanged()
+                    }
+                }
+            }
+
+            override fun onChildRemoved(snapshot: DataSnapshot) {
+                val event = snapshot.getValue(Event::class.java)
+                if (event != null) {
+                    events.removeAll { it.id == event.id }
+                    adapter.notifyDataSetChanged()
+                }
+            }
+
+            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {
+                // Handle if needed, e.g., if your data is ordered
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -117,7 +140,7 @@ class EventFragment : Fragment() {
         database.child(event.id).removeValue()
             .addOnSuccessListener {
                 events.remove(event)
-                recyclerView.adapter?.notifyDataSetChanged()
+                adapter.notifyDataSetChanged()
             }
             .addOnFailureListener { e ->
                 e.printStackTrace()
